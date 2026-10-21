@@ -4,7 +4,7 @@
 
 # Overview
 
-This project presents the complete engineering workflow for modeling, simulating, and controlling an inverted pendulum using **ROS2 Humble**, **Gazebo Fortress**, **URDF/Xacro**, and **Python**.
+This project presents the complete engineering workflow for modeling, simulating, and controlling an inverted pendulum using **ROS2 Jazzy**, **Gazebo Harmonic**, **URDF/Xacro**, and **Python**.
 
 Rather than demonstrating only a balancing controller, the objective is to develop the entire control pipeline from defining a conceptual mechanical system to deriving its mathematical model, designing an optimal controller, implementing the controller as a ROS2 node, and validating its behavior in a physics-based simulation.
 
@@ -119,7 +119,7 @@ This repository demonstrates the complete development of a modern control system
 
 ### Software
 
-- ROS2 Humble package architecture
+- ROS2 Jazzy package architecture
 - Python-based controller implementation
 - Publisher/subscriber communication
 - Gazebo–ROS2 integration
@@ -251,7 +251,7 @@ The robot model includes:
 - Joint limits
 - Material definitions
 
-The resulting URDF model is used by both **RViz2** for visualization and **Gazebo Fortress** for physics simulation.
+The resulting URDF model is used by both **RViz2** for visualization and **Gazebo Harmonic** for physics simulation.
 
 Unlike CAD software, URDF is not intended to produce manufacturing-ready mechanical assemblies. Instead, its primary purpose is to provide an accurate computational model suitable for kinematic analysis, dynamic simulation, and robotics software development.
 
@@ -853,10 +853,10 @@ Before building the project, make sure the following software is installed.
 
 | Software | Version |
 |-----------|---------|
-| Ubuntu | 22.04 LTS |
-| ROS2 | Humble Hawksbill |
-| Gazebo | Fortress |
-| Python | 3.10+ |
+| Ubuntu | 24.04 LTS |
+| ROS2 | Jazzy Jalisco |
+| Gazebo | Harmonic |
+| Python | 3.12+ |
 | colcon | Latest |
 | Git | Latest |
 
@@ -871,7 +871,7 @@ cd ros2-inverted-pendulum-simulation-and-lqr-control
 ## Install Dependencies
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 
 rosdep install \
     --from-paths src \
@@ -905,7 +905,7 @@ ros2 launch inverted_pendulum_bringup inverted_pendulum.launch.xml
 The launch file automatically starts
 
 - Robot State Publisher
-- Gazebo Fortress
+- Gazebo Harmonic
 - Robot Spawner
 - ROS2–Gazebo Bridge
 - LQR Controller Node
