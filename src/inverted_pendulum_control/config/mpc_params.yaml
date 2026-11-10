@@ -1,0 +1,6 @@
+inverted_pendulum_controller:
+  ros__parameters:
+    dt: 0.02
+    horizon: 23
+    Q: [10.0, 1.0, 100.0, 1.0]
+    R: 0.1

@@ -1,3 +1,5 @@
+from glob import glob
+
 from setuptools import find_packages, setup
 
 package_name = 'inverted_pendulum_control'
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/inverted_pendulum_control']),
         ('share/inverted_pendulum_control', ['package.xml']),
+        ('share/inverted_pendulum_control/config', glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

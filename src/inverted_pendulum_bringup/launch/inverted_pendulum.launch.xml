@@ -33,7 +33,9 @@
     <node pkg="inverted_pendulum_control"
       exec="control_node"
       name="inverted_pendulum_controller"
-      output="screen" />
+      output="screen">
+        <param from="$(find-pkg-share inverted_pendulum_control)/config/mpc_params.yaml" />
+    </node>
 
     <node pkg="rviz2" 
           exec="rviz2" 

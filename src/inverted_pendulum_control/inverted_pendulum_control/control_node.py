@@ -1,16 +1,42 @@
+import time
+
 import numpy as np
 import rclpy
 
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
-from scipy.linalg import solve_continuous_are
+
+from inverted_pendulum_control.model import linear_model, discretize
+from inverted_pendulum_control.mpc import MPCController
 
 
 class InvertedPendulumController(Node):
 
     def __init__(self):
         super().__init__('inverted_pendulum_controller')
+
+        # Los parámetros se declaran solo con su tipo, sin valor por defecto,
+        # para que config/mpc_params.yaml sea la única fuente de los valores y
+        # no haya que mantenerlos duplicados acá. Si el nodo se lanza sin el
+        # yaml, get_parameter lanza ParameterUninitializedException y el nodo
+        # no arranca, en vez de usar en silencio valores fijos en el código.
+        self.declare_parameter('dt', Parameter.Type.DOUBLE)
+        self.declare_parameter('horizon', Parameter.Type.INTEGER)
+        self.declare_parameter('Q', Parameter.Type.DOUBLE_ARRAY)
+        self.declare_parameter('R', Parameter.Type.DOUBLE)
+
+        dt = self.get_parameter('dt').value
+        N = self.get_parameter('horizon').value
+        Q = np.diag(self.get_parameter('Q').value)
+        R = np.array([[self.get_parameter('R').value]])
+
+        A, B = linear_model()
+        Ad, Bd = discretize(A, B, dt)
+        self.controller = MPCController(Ad, Bd, Q, R, N)
+
+        self.state = None
 
         self.subscription = self.create_subscription(
             JointState,
@@ -25,88 +51,34 @@ class InvertedPendulumController(Node):
             10
         )
 
-        # System parameters
-        M = 3.0
-        m = 1.0
-        L = 0.5
-        r = 0.01
-        g = 9.81
+        # La frecuencia de control tiene que coincidir con el dt usado para discretizar el modelo
+        self.timer = self.create_timer(dt, self.control_loop)
 
-        # Distance between the pivot and the centre of mass
-        l = L / 2.0
-
-        # Pendulum inertia about its centre of mass
-        I = (m / 12.0) * (3.0 * r**2 + L**2)
-
-        # Total pendulum inertia about the pivot
-        J = I + m * l**2
-
-        # Common denominator (determinant) obtained when solving the equations of motion in matrix form
-        delta = (M + m) * J - (m * l)**2
-
-        # State-space matrices
-        A = np.array([
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, -(m**2 * g * l**2) / delta, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-            [0.0, 0.0, m * g * l * (M + m) / delta, 0.0]
-        ])
-
-        B = np.array([
-            [0.0],
-            [J / delta],
-            [0.0],
-            [-m * l / delta]
-        ])
-
-        # LQR weighting matrices
-        Q = np.diag([
-            10.0,
-            1.0,
-            100.0,
-            1.0
-        ])
-
-        R = np.array([
-            [0.1]
-        ])
-
-        # Solve the continuous-time algebraic Riccati equation
-        P = solve_continuous_are(A, B, Q, R)
-
-        # LQR gain matrix
-        self.K = np.linalg.inv(R) @ B.T @ P
-
-        self.get_logger().info(f'K matrix: {self.K}')
+        self.get_logger().info(f'MPC started: dt={dt}, horizon={N}')
 
     def joint_state_callback(self, msg):
-
         cart_index = msg.name.index('cart_rail_joint')
         pendulum_index = msg.name.index('pendulum_cart_joint')
 
-        # State variables
-        x = msg.position[cart_index]
-        x_dot = msg.velocity[cart_index]
-
-        theta = msg.position[pendulum_index]
-        theta_dot = msg.velocity[pendulum_index]
-
-        # State vector
-        state = np.array([
-            [x],
-            [x_dot],
-            [theta],
-            [theta_dot]
+        # Vector de estado: [x, x_dot, theta, theta_dot]
+        self.state = np.array([
+            [msg.position[cart_index]],
+            [msg.velocity[cart_index]],
+            [msg.position[pendulum_index]],
+            [msg.velocity[pendulum_index]]
         ])
 
-        # LQR control force
-        force = -self.K @ state
+    def control_loop(self):
+        if self.state is None:
+            return
 
-        # Convert the force to a ROS message
+        start = time.perf_counter()
+        force = self.controller.solve(self.state)
+        solve_ms = (time.perf_counter() - start) * 1000.0
+        self.get_logger().debug(f'MPC solve time: {solve_ms:.2f} ms')
+
         force_msg = Float64()
-        force_msg.data = float(force[0, 0])
-
-        # Publish the control force
+        force_msg.data = force
         self.publisher.publish(force_msg)
 
 

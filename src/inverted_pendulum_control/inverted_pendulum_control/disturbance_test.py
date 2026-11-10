@@ -30,6 +30,13 @@ class DisturbanceTest(Node):
         if self.started:
             return
 
+        # Se espera a que el bridge de Gazebo esté suscrito al topic; si se
+        # publica antes, el mensaje se pierde y la perturbación nunca llega.
+        # El timer vuelve a llamar a esta función cada 0.5 s hasta que haya
+        # un suscriptor.
+        if self.publisher.get_subscription_count() == 0:
+            return
+
         self.started = True
         self.start_timer.cancel()
 
